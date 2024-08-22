@@ -102,8 +102,12 @@ void setup() {
   Serial.begin(115200);
   WiFi.begin(ssid, password);
   while ( WiFi.status() != WL_CONNECTED ) {
-    delay ( 500 );
-    Serial.print ( "." );
+    delay ( 100 );
+    digitalWrite(16, 0);
+    digitalWrite(14, 0);
+    delay ( 100 );
+    digitalWrite(16, 1);
+    digitalWrite(14, 1); 
   }
   Serial.print ( "Connected\n" );
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
@@ -121,7 +125,7 @@ void setup() {
   second = timeinfo.tm_sec;
   mm = millis();
   odd_day = timeinfo.tm_yday % 2;
-  write_dig4(timeinfo.tm_hour*100+timeinfo.tm_min, odd_day);
+  write_dig4(timeinfo.tm_hour*100+timeinfo.tm_min, 1 - odd_day);
   // timeClient.begin();
   // int h = timeClient.getHours();
   // int m = timeClient.getMinutes();
@@ -156,7 +160,7 @@ void loop() {
       }
       int h = minute_of_the_day / 60;
       int m = minute_of_the_day % 60;
-      write_dig4(h*100+m, odd_day);
+      write_dig4(h*100+m, 1 - odd_day);
     }
   }
   delay(1);
