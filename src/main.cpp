@@ -85,14 +85,14 @@ void write_dig(int index, int val, int b = 0) {
   WIRE.endTransmission();
 }
 
-void write_dig4(int val, int b = 0) {
-  write_dig(L0, val / 1000);
+void write_dig4(int val, int b0, int b1, int b2, int b3) {
+  write_dig(L0, val / 1000,b0);
   val = val % 1000;
-  write_dig(L1, val / 100);
+  write_dig(L1, val / 100,b1);
   val = val % 100;
-  write_dig(L2, val / 10);
+  write_dig(L2, val / 10,b2);
   val = val % 10;
-  write_dig(L3, val, b);
+  write_dig(L3, val, b3);
 }
 
 void setup() {
@@ -117,15 +117,15 @@ void setup() {
     return;
   }
   int year = timeinfo.tm_year + 1900;
-  write_dig4(year);
+  write_dig4(year, 0,0,0,0);
   delay(5000);
-  write_dig4((timeinfo.tm_mon + 1) * 100 + timeinfo.tm_mday);
+  write_dig4((timeinfo.tm_mon + 1) * 100 + timeinfo.tm_mday,0,0,0,0);
   delay(5000);
   minute_of_the_day = timeinfo.tm_hour * 60 + timeinfo.tm_min;
   second = timeinfo.tm_sec;
   mm = millis();
   odd_day = timeinfo.tm_yday % 2;
-  write_dig4(timeinfo.tm_hour*100+timeinfo.tm_min, 1 - odd_day);
+  write_dig4(timeinfo.tm_hour*100+timeinfo.tm_min, 0,0,0,1 - odd_day);
   // timeClient.begin();
   // int h = timeClient.getHours();
   // int m = timeClient.getMinutes();
@@ -149,6 +149,7 @@ void loop() {
       // if (minute_of_the_day == 24*60) {
       //   minute_of_the_day = 0;
       // }
+      int r = 0;
       if (minute_of_the_day % 60 == 0) {
         struct tm timeinfo;
         if (getLocalTime(&timeinfo)) {
@@ -156,11 +157,14 @@ void loop() {
           second = timeinfo.tm_sec;
           odd_day = timeinfo.tm_yday % 2;
           mm = millis();
+          r = timeinfo.tm_yday % 40;
         }      
       }
       int h = minute_of_the_day / 60;
       int m = minute_of_the_day % 60;
-      write_dig4(h*100+m, 1 - odd_day);
+      
+      int buy = (r == 38 || r == 39);
+      write_dig4(h*100+m, buy,0,0,1-odd_day);
     }
   }
   delay(1);
