@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-
+#include <nongli.h>
 #include "ssid.private.h"
 // put a 'ssid.private.h' in /include with content:
 //const char *ssid     = "<SSID>";
@@ -10,16 +10,17 @@
 
 const long utcOffsetInSeconds = 3600 * 8;
 
-const char *ntpServer = "asia.pool.ntp.org";
+const char *ntpServer = "ntp1.aliyun.com";
 const long gmtOffset_sec = 8 * 3600;
 const int daylightOffset_sec = 0;
 
 #define WIRE Wire
 
-
+int lunarInfo[31];
 
 int minute_of_the_day = 0;
 int odd_day = 0;
+int odd_4day = 0;
 int second = 0;
 unsigned long mm = 0;
 
@@ -90,10 +91,20 @@ void write_dig4(int val, int b0, int b1, int b2, int b3) {
   val = val % 1000;
   write_dig(L1, val / 100,b1);
   val = val % 100;
-  write_dig(L2, val / 10,b2);
+  write_dig(L2, val / 10, b2);
   val = val % 10;
   write_dig(L3, val, b3);
 }
+
+void update_time(int h, int m, int _lunarToday) {
+  // Serial.printf("day_of_year = %d\n", day_of_year);
+  int lunarDay = abs(_lunarToday) % 100;
+  int led0 = (lunarDay == 1 || lunarDay == 15) ? 1 : 0;
+
+  write_dig4(h*100+m,led0,0,0,0);
+}
+
+int lunarToday;
 
 void setup() {
   WIRE.begin();
@@ -116,6 +127,9 @@ void setup() {
     Serial.println("Failed to obtain time");
     return;
   }
+  nl_month_days(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, lunarInfo);
+  lunarToday = lunarInfo[timeinfo.tm_mday - 1];
+  Serial.printf("lunarToday: %d\n", lunarToday);
   int year = timeinfo.tm_year + 1900;
   write_dig4(year, 0,0,0,0);
   delay(5000);
@@ -124,8 +138,8 @@ void setup() {
   minute_of_the_day = timeinfo.tm_hour * 60 + timeinfo.tm_min;
   second = timeinfo.tm_sec;
   mm = millis();
-  odd_day = timeinfo.tm_yday % 2;
-  write_dig4(timeinfo.tm_hour*100+timeinfo.tm_min, 0,0,0,1 - odd_day);
+  update_time(timeinfo.tm_hour, timeinfo.tm_min, lunarToday);
+  // g_tm_yday = timeinfo.tm_yday;
   // timeClient.begin();
   // int h = timeClient.getHours();
   // int m = timeClient.getMinutes();
@@ -149,22 +163,20 @@ void loop() {
       // if (minute_of_the_day == 24*60) {
       //   minute_of_the_day = 0;
       // }
-      int r = 0;
       if (minute_of_the_day % 60 == 0) {
         struct tm timeinfo;
         if (getLocalTime(&timeinfo)) {
           minute_of_the_day = timeinfo.tm_hour * 60 + timeinfo.tm_min;
           second = timeinfo.tm_sec;
-          odd_day = timeinfo.tm_yday % 2;
           mm = millis();
-          r = timeinfo.tm_yday % 40;
+          // g_tm_yday = timeinfo.tm_yday;
+          nl_month_days(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, lunarInfo);
+          lunarToday = lunarInfo[timeinfo.tm_mday - 1];
         }      
       }
       int h = minute_of_the_day / 60;
       int m = minute_of_the_day % 60;
-      
-      int buy = (r == 38 || r == 39);
-      write_dig4(h*100+m, buy,0,0,1-odd_day);
+      update_time(h, m, lunarToday);
     }
   }
   delay(1);

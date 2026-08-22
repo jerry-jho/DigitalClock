@@ -1,2 +1,2 @@
 all:
-	pio run --target upload
+	python.exe -m platformio run --target upload
